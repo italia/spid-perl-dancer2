@@ -2,8 +2,6 @@ package Dancer2::Plugin::SPID;
 use Dancer2::Plugin;
 
 has '_spid'         => (is => 'lazy');
-has '_on_login'     => (is => 'rw');
-has '_on_logout'    => (is => 'rw');
 has 'spid_button'   => (is => 'lazy', plugin_keyword => 1);
 
 use Carp;
@@ -40,16 +38,6 @@ sub _build_spid_button {
     return $self->_spid->get_button($self->config->{login_endpoint} . '?idp=%s');
 }
 
-sub spid_on_login :PluginKeyword {
-    my ($self, $cb) = @_;
-    $self->_on_login($cb);
-}
-
-sub spid_on_logout :PluginKeyword {
-    my ($self, $cb) = @_;
-    $self->_on_logout($cb);
-}
-
 sub spid_session :PluginKeyword {
     my ($self) = @_;
     return $self->dsl->session('__spid_session');
@@ -59,7 +47,8 @@ sub BUILD {
     my ($self) = @_;
     
     # Check that we have all the required config options.
-    foreach my $key (qw(sp_entityid sp_key_file sp_cert_file idp_metadata_dir)) {
+    foreach my $key (qw(sp_entityid sp_key_file sp_cert_file idp_metadata_dir
+        login_endpoint logout_endpoint)) {
         croak "Missing required config option for SPID: '$key'"
             if !$self->config->{$key};
     }
@@ -304,3 +293,190 @@ sub BUILD {
 }
 
 1;
+
+=head1 SYNOPSIS
+
+    use Dancer2;
+    use Dancer2::Plugin::SPID;
+    
+    hook 'plugin.SPID.after_login' => sub {
+        # log assertion:
+        info "User " . spid_session->nameid . " logged in";
+        info "SPID Assertion: " . spid_session->assertion_xml;
+    };
+    
+    hook 'plugin.SPID.after_logout' => sub {
+        debug "User " . spid_session->nameid . " logged out";
+    };
+
+    dance;
+
+=head1 ABSTRACT
+
+This Perl module is a plugin for the L<Dancer2> web framework. It allows developers of SPID Service Providers to easily add SPID authentication to their Dancer2 applications. L<SPID|https://www.spid.gov.it/> is the Italian digital identity system, which enables citizens to access all public services with single set of credentials.
+
+This module provides the highest level of abstraction and ease of use for integration of SPID in a Dancer2 web application. Just set a few configuration options and you'll be able to generate the HTML markup for the SPID button on the fly (to be completed) in order to place it wherever you want in your templates. This plugin will automatically generate all the routes for SAML bindings, so you don't need to perform any plumbing manually. Hooks are provided for customizing behavior.
+
+See the F<example/> directory for a demo application.
+
+This is module is based on L<Net::SPID> which provides the lower-level framework-independent implementation of SPID for Perl.
+
+=head1 CONFIGURATION
+
+Configuration options can be set in the Dancer2 config file:
+
+    plugins:
+      SPID:
+        sp_entityid: "https://www.prova.it/"
+        sp_key_file: "sp.key"
+        sp_cert_file: "sp.pem"
+        idp_metadata_dir: "idp_metadata/"
+        login_endpoint: "/spid-login"
+        logout_endpoint: "/spid-logout"
+        sso_endpoint: "/spid-sso"
+        slo_endpoint: "/spid-slo"
+
+=over
+
+=item I<sp_entityid>
+
+(Required.) The entityID value for this Service Provider. According to SPID regulations, this should be a URI.
+
+=item I<sp_key_file>
+
+(Required.) The absolute or relative file path to our private key file.
+
+=item I<sp_cert_file>
+
+(Required.) The absolute or relative file path to our certificate file.
+
+=item I<idp_metadatadir>
+
+(Required.) The absolute or relative path to a directory containing metadata files for Identity Providers in XML format (their file names are expected to end in C<.xml>).
+
+=item I<login_endpoint>
+
+(Required.) The relative HTTP path we want to use for the SPID button login action. A route handler will be created for this path that generates an AuthnRequest and redirects the user to the chosen Identity Provider using the HTTP-Redirect binding.
+
+=item I<logout_endpoint>
+
+(Required.) The relative HTTP path we want to use for the logout action. A route handler will be created for this path that generates a LogoutRequest and redirects the user to the current Identity Provider using the HTTP-Redirect binding.
+
+=item I<sso_endpoint>
+
+(Required.) The relative HTTP path we want to expose as AssertionConsumerService. This must match the URL advertised in the Service Provider metadata.
+
+=item I<slo_endpoint>
+
+(Required.) The relative HTTP path we want to expose as SingleLogoutService. This must match the URL advertised in the Service Provider metadata.
+
+=item I<jwt_secret>
+
+(Optional.) The secret using for encoding relay state data.
+
+=back
+
+=head1 KEYWORDS
+
+The following keywords are available.
+
+=head2 spid_session
+
+This keyword returns the current L<Net::SPID::Session> object if any. It can be used to check whether we have an active SPID session.
+
+    if (spid_session) {
+        template 'user';
+    } else {
+        template 'index';
+    }
+
+This keyword is also available in templates, so you can use it for accessing attributes:
+
+        Attribute: [% spid_session.attributes.MyAttribute %]
+
+=head1 TEMPLATE KEYWORDS
+
+=head2 spid_button
+
+This keyword generates the HTML markup for the SPID login button. Just place it wherever you want the button to appear:
+
+    [% spid_button(level => 2, redirect => '/') %]
+
+The following arguments can be supplied:
+
+=over
+
+=item I<level>
+
+(Optional.) The required SPID level, expressed as an integer (1, 2, or 3). If omitted, 1 will be requested.
+
+=item I<redirect>
+
+(Optional.) The relative HTTP path where user will be redirected after successful login. If omitted, C</> will be used.
+
+=back
+
+=head2 spid_login
+
+This keyword will return the URL for directing the user to the current Identity Provider in order to perform a SPID level upgrade. The URL is preformatted with the HTTP-Redirect AuthnRequest. It accepts the same arguments described for L<spid_button>. You must check whether the user has an active SPID session before using it.
+
+    [% IF spid_session %]
+        <a href="[% spid_login(level => 2, redirect => '/') %]">Upgrade to L2</a>
+    [% END %]
+
+=head2 spid_logout
+
+This keyword will return the URL for initiating a Single Logout by directing the user to the current Identity Provider with a LogoutRequest. You must check whether the user has an active SPID session before using it. It accepts an optional C<redirect> argument as described for L<spid_button>.
+
+    [% IF spid_session %]
+        <a href="[% spid_logout(redirect => '/') %]">Logout</a>
+    [% END %]
+
+=head1 HOOKS
+
+=head2 before_login
+
+This hook is called when the login endpoint is called (i.e. the SPID button is clicked or user visited the upgrade URL returned by L<spid_login>) and the AuthnRequest is about to be crafted.
+
+    hook 'plugin.SPID.before_login' => sub {
+        info "User is initiating SSO";
+    };
+
+=head2 after_login
+
+This hook is called after the user returns to us after initiating the SPID session with the Identity Provider.
+
+    hook 'plugin.SPID.after_login' => sub {
+        info "User " . spid_session->nameid . " logged in";
+    
+        # Here you might want to create the user in your local database or do more
+        # things for initializing the session. Make sure everything you do here is
+        # idempotent.
+    
+        # Log assertion as required by the SPID rules.
+        # Warning: in order to comply with rules, this should be logged in a more
+        # permanent way than regular Dancer logs, so you'd better use a database
+        # or a dedicated log file.
+        info "SPID Assertion: " . spid_session->assertion_xml;
+    };
+
+=head2 before_logout
+
+This hook is called when the logout endpoint is called and the LogoutRequest
+is about to be crafted.
+
+    hook 'plugin.SPID.before_logout' => sub {
+        debug "User " . spid_session->nameid . " is about to logout";
+    };
+
+=head2 after_logout
+
+This hook is called when a SPID session is terminated. Note that this might be triggered also when user initiated logout from another Service Provider or directly within the Identity Provider, thus without calling our logout endpoint and the L<before_logout> hook).
+L<spid_session> will be cleared I<after> this hook is executed, so you can use it.
+
+    hook 'plugin.SPID.after_logout' => sub {
+        my $success = shift;  # 'success' or 'partial'
+        debug "User " . spid_session->nameid . " logged out";
+    };
+
+=cut

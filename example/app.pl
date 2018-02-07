@@ -49,10 +49,10 @@ hook 'plugin.SPID.before_logout' => sub {
     debug "User " . spid_session->nameid . " is about to logout";
 };
 
-# This hook is called when a SPID session is terminated (this might be called
+# This hook is called when a SPID session is terminated (this might be triggered
 # also when user initiated logout from another Service Provider or directly
 # within the Identity Provider, thus without calling our logout endpoint and
-# the 'before_spid_logout' hook).
+# the 'before_logout' hook).
 hook 'plugin.SPID.after_logout' => sub {
     my $success = shift;  # 'success' or 'partial'
     debug "User " . spid_session->nameid . " logged out";
