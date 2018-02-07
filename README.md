@@ -3,7 +3,7 @@ Dancer2 plugin for for SPID authentication
 
 [![Join the #spid-perl channel](https://img.shields.io/badge/Slack%20channel-%23spid--perl-blue.svg?logo=slack)](https://developersitalia.slack.com/messages/C7ESTMQDQ)
 [![Get invited](https://slack.developers.italia.it/badge.svg)](https://slack.developers.italia.it/)
-[![SPID on forum.italia.it](https://img.shields.io/badge/Forum-SPID-blue.svg)](https://forum.italia.it/c/spid)
+[![SPID on forum.italia.it](https://img.shields.io/badge/Forum-SPID-blue.svg)](https://forum.italia.it/c/spid) [![Build Status](https://travis-ci.org/italia/spid-perl-dancer2.svg?branch=master)](https://travis-ci.org/italia/spid-perl-dancer2) [![MetaCPAN Release](https://badge.fury.io/pl/Dancer2-Plugin-SPID.svg)](https://metacpan.org/release/Dancer2-Plugin-SPID)
 
 This Perl module is a plugin for the well-known Dancer2 web framework. It allows developers of SPID Service Providers to easily add SPID authentication to their Dancer2 applications. [SPID](https://www.spid.gov.it/) is the Italian digital identity system, which enables citizens to access all public services with single set of credentials.
 
@@ -33,6 +33,10 @@ Or, if you want the latest version from git, use:
 ```
 cpanm https://github.com/italia/spid-perl-dancer2/archive/master.tar.gz
 ```
+
+## Documentation
+
+See the POD documentation in [Dancer2::Plugin::SPID](lib/Dancer2/Plugin/SPID.pm) or see it on [MetaCPAN](https://metacpan.org/release/Dancer2-Plugin-SPID).
 
 ## See also
 
