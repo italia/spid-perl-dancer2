@@ -1,4 +1,5 @@
 package Dancer2::Plugin::SPID;
+# ABSTRACT: SPID authentication for Dancer2 web applications
 use Dancer2::Plugin;
 
 has '_spid'         => (is => 'lazy');
