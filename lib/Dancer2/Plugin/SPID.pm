@@ -19,7 +19,7 @@ sub _build__spid {
     
     # Initialize our Net::SPID object with information about this SP.
     my $spid = Net::SPID->new(
-        map { $_ => $self->config->{$_} }
+        map { $_ => $self->config->{$_} } grep defined $self->config->{$_},
             qw(sp_entityid sp_key_file sp_cert_file 
             sp_assertionconsumerservice sp_singlelogoutservice
             sp_attributeconsumingservice)
@@ -96,6 +96,18 @@ sub BUILD {
             $vars->{spid_session} = sub { $self->spid_session };
         }
     ));
+    
+    # Create a route for the metadata endpoint.
+    if ($self->config->{metadata_endpoint}) {
+        $self->app->add_route(
+            method  => 'get',
+            regexp  => $self->config->{metadata_endpoint},
+            code    => sub {
+                $self->dsl->content_type('application/xml');
+                return $self->_spid->metadata;
+            },
+        );
+    }
     
     # Create a route for the login endpoint.
     # This endpoint initiates SSO through the user-chosen Identity Provider.
@@ -379,8 +391,6 @@ A hashref with the URL(s) of our SingleLogoutService endpoint(s), along with the
           - "familyName"
           - "dateOfBirth"
 
-
-
 =item I<idp_metadatadir>
 
 (Required.) The absolute or relative path to a directory containing metadata files for Identity Providers in XML format (their file names are expected to end in C<.xml>).
@@ -400,6 +410,10 @@ A hashref with the URL(s) of our SingleLogoutService endpoint(s), along with the
 =item I<slo_endpoint>
 
 (Required.) The relative HTTP path we want to expose as SingleLogoutService. This must match the URL advertised in the Service Provider metadata.
+
+=item I<metadata_endpoint>
+
+(Optional.) The relative HTTP path we want to use for publishing our SP metadata. If omitted, no endpoint will be exposed.
 
 =item I<jwt_secret>
 

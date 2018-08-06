@@ -19,3 +19,4 @@ plugins:
     logout_endpoint: "/spid-logout"
     sso_endpoint: "/spid-sso"
     slo_endpoint: "/spid-slo"
+    metadata_endpoint: "/spid-metadata.xml"
